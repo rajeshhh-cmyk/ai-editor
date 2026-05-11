@@ -9,6 +9,10 @@ import {
 } from "../../types/constants";
 import { Main } from "./MyComp/Main";
 import { NextLogo } from "./MyComp/NextLogo";
+import {
+  VideoEditorComposition,
+  calculateMetadata,
+} from "./VideoEditor/Composition";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -32,6 +36,16 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{
           outProgress: 0,
         }}
+      />
+      <Composition
+        id="VideoEditor"
+        component={VideoEditorComposition}
+        calculateMetadata={calculateMetadata}
+        durationInFrames={1}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{ src: "C0859.MP4" }}
       />
     </>
   );
