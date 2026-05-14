@@ -50,7 +50,7 @@ console.log(
 
 // --- silence detection ---
 const ffmpegOut = execSync(
-  `npx remotion ffmpeg -i "${INPUT}" -af "silencedetect=noise=${NOISE_DB}:d=${MIN_SILENCE_SEC}" -f null - 2>&1`,
+  `npx remotion ffmpeg -i "${INPUT}" -vn -af "silencedetect=noise=${NOISE_DB}:d=${MIN_SILENCE_SEC}" -f null - 2>&1`,
   { encoding: "utf8", shell: true }
 );
 
