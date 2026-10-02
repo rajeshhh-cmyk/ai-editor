@@ -32,6 +32,21 @@ const KEYWORDS = new Set([
   "AI",
 ]);
 
+/** Words set in italic for spoken emphasis. */
+const ITALIC_WORDS = new Set([
+  "DON'T",
+  "BAD",
+  "EVERY",
+  "INTELLIGENT",
+  "CUSTOM",
+  "ENTIRE",
+  "MANUALLY",
+  "SCALING",
+]);
+
+const isItalic = (word: string) =>
+  ITALIC_WORDS.has(word.trim().toUpperCase().replace(/[^A-Z']/g, ""));
+
 export const isKeyword = (word: string) => {
   const cleaned = word
     .trim()
@@ -79,14 +94,15 @@ const CaptionPage: React.FC<{ page: TikTokPage }> = ({ page }) => {
           flexWrap: "wrap",
           justifyContent: "center",
           columnGap: "0.2em",
-          textTransform: "uppercase",
-          letterSpacing: "-0.01em",
+          fontVariantCaps: "small-caps",
+          letterSpacing: "0.01em",
         }}
       >
         {page.tokens.map((token, i) => {
           const isActive = token.fromMs <= nowMs && token.toMs > nowMs;
           const isPast = token.toMs <= nowMs;
           const keyword = isKeyword(token.text);
+          const italic = isItalic(token.text);
 
           const activeFrame = Math.round(((nowMs - token.fromMs) / 1000) * fps);
           const pop = isActive
@@ -98,6 +114,9 @@ const CaptionPage: React.FC<{ page: TikTokPage }> = ({ page }) => {
 
           const goldFill = keyword || isActive;
           const base: React.CSSProperties = {
+            fontStyle: italic ? "italic" : "normal",
+            // keeps the slanted last letter inside gradient-clipped text
+            paddingRight: italic ? "0.08em" : undefined,
             display: "inline-block",
             transform: `scale(${wordScale})`,
             opacity: isActive || isPast ? 1 : 0.6,
@@ -129,7 +148,7 @@ const CaptionPage: React.FC<{ page: TikTokPage }> = ({ page }) => {
             // The hidden copy reserves the word's popped (1.08x) width so the
             // active word never collides with its neighbours.
             <span key={`${token.fromMs}-${i}`} style={{ display: "inline-grid" }}>
-              <span style={{ gridArea: "1 / 1", visibility: "hidden", fontSize: "1.08em", lineHeight: 1.1 }}>
+              <span style={{ gridArea: "1 / 1", visibility: "hidden", fontSize: "1.08em", lineHeight: 1.1, fontStyle: base.fontStyle, paddingRight: base.paddingRight }}>
                 {word}
               </span>
               <span style={{ gridArea: "1 / 1", justifySelf: "center", alignSelf: "center", ...style }}>

@@ -32,6 +32,11 @@ const inter = loadInter("normal", {
   weights: ["600", "700"],
   subsets: ["latin"],
 });
+// Italic Inter for emphasised caption words.
+loadInter("italic", {
+  weights: ["700"],
+  subsets: ["latin"],
+});
 const playfair = loadPlayfair("italic", {
   weights: ["700"],
   subsets: ["latin"],

@@ -36,7 +36,7 @@ export const useLayout = (): Layout => {
       stage: { top: 190, left: safe.side, width: width - safe.side * 2, height: 1060 },
       captionY: 0.7,
       captionMaxWidth: 900,
-      captionFontSize: 72,
+      captionFontSize: 80,
       safe,
     };
   }
@@ -50,7 +50,7 @@ export const useLayout = (): Layout => {
     stage: { top: 120, left: safe.side, width: width - safe.side * 2, height: 680 },
     captionY: 0.84,
     captionMaxWidth: 1400,
-    captionFontSize: 60,
+    captionFontSize: 66,
     safe,
   };
 };
