@@ -72,7 +72,7 @@ const CaptionPage: React.FC<{ page: TikTokPage }> = ({ page }) => {
           opacity,
           textAlign: "center",
           fontFamily: FONTS.body,
-          fontWeight: 800,
+          fontWeight: 700,
           fontSize: layout.captionFontSize,
           lineHeight: 1.2,
           display: "flex",

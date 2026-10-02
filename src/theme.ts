@@ -29,7 +29,7 @@ const montserrat = loadMontserrat("normal", {
   subsets: ["latin"],
 });
 const inter = loadInter("normal", {
-  weights: ["600", "800"],
+  weights: ["600", "700"],
   subsets: ["latin"],
 });
 const playfair = loadPlayfair("italic", {
