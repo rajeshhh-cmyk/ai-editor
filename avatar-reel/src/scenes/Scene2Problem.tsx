@@ -61,7 +61,7 @@ const ProblemTitle: React.FC = () => {
   );
 };
 
-/** Instagram post with a like counter stuck at 12, next to a sales counter stuck at ₹0. */
+/** Instagram post with a like counter stuck at 12, next to a sales counter stuck at $0. */
 const PostAndSales: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
   const postIn = pop(frame, fps, L(CUES.post) - 4);
   const likes = Math.round(interpolate(frame, [L(CUES.likes) - 4, L(CUES.likes) + 14], [0, 12], {
@@ -130,7 +130,7 @@ const PostAndSales: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) 
       >
         <div style={{ ...LABEL, fontSize: 22 }}>SALES</div>
         <div style={{ ...HEADLINE, fontSize: 110, marginTop: 6 }}>
-          <GoldText glow={0.6}>₹0</GoldText>
+          <GoldText glow={0.6}>$0</GoldText>
         </div>
         <div style={{ fontFamily: FONTS.body, fontWeight: 600, fontSize: 22, color: COLORS.muted }}>this month</div>
       </GlassCard>
