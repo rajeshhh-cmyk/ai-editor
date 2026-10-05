@@ -1,52 +1,32 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { lerp, pop, smooth } from "../anim";
 import { LOGO } from "../scenes.config";
-import { COLORS, FONTS, W } from "../theme";
-import { GoldText } from "./GoldText";
+import { W, goldRgba } from "../theme";
 
-/** "White & Gold" (Playfair 700 italic) over tracked "AI SOLUTIONS" (Montserrat). */
+/** The White & Gold AI Solutions Inc. badge (public/logo.png). `size` is its diameter in px. */
 export const LogoLockup: React.FC<{ size?: number; glow?: number; style?: React.CSSProperties }> = ({
-  size = 130,
+  size = 400,
   glow = 1,
   style,
 }) => (
-  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", ...style }}>
-    <div
-      style={{
-        fontFamily: FONTS.brand,
-        fontStyle: "italic",
-        fontWeight: 700,
-        fontSize: size,
-        lineHeight: 1.08,
-        whiteSpace: "nowrap",
-        color: COLORS.white,
-        paddingRight: size * 0.06,
-      }}
-    >
-      White <span style={{ color: COLORS.muted }}>&amp;</span> <GoldText glow={glow}>Gold</GoldText>
-    </div>
-    <div
-      style={{
-        fontFamily: FONTS.headline,
-        fontWeight: 700,
-        fontSize: size * 0.19,
-        letterSpacing: "0.55em",
-        marginRight: "-0.55em",
-        marginTop: size * 0.1,
-        color: COLORS.gold,
-        whiteSpace: "nowrap",
-      }}
-    >
-      AI SOLUTIONS
-    </div>
-  </div>
+  <Img
+    src={staticFile("logo.png")}
+    style={{
+      width: size,
+      height: size,
+      display: "block",
+      filter: glow > 0 ? `drop-shadow(0 0 ${Math.round(40 * glow)}px ${goldRgba(Math.min(0.35 * glow, 0.7))})` : undefined,
+      ...style,
+    }}
+  />
 );
 
-const BIG = 132;
-const SMALL = 40;
+/** Badge diameter: centred reveal → top-centre watermark. */
+const BIG = 560;
+const SMALL = 100;
 const CENTER_Y = 820;
-const WATERMARK_Y = 150;
+const WATERMARK_Y = 128;
 
 /**
  * Global logo: springs in big and centred during the brand reveal, then
@@ -72,8 +52,7 @@ export const BrandLogo: React.FC = () => {
           top: y,
           transform: `translate(-50%, -50%) scale(${scale})`,
           opacity: opacity * lerp(1, 0.9, shrink),
-          filter: shrink > 0.5 ? "drop-shadow(0 2px 10px rgba(0,0,0,0.7))" : undefined,
-        }}
+                  }}
       >
         <LogoLockup size={BIG} glow={lerp(1.8, 0.8, shrink)} />
       </div>

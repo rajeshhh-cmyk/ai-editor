@@ -29,7 +29,7 @@ If you change the voiceover, regenerate captions and then retime `src/timeline.t
 
 ## Retiming
 
-All scene boundaries (`SCENES`) and word cues (`CUES`) are in **`src/timeline.ts`**, in absolute frames. Each scene starts exactly on its `from` frame, and the outgoing scene overlaps it by `TRANSITION_FRAMES`. Website and phone for the end card are in `CONTACT` in the same file.
+All scene boundaries (`SCENES`) and word cues (`CUES`) are in **`src/timeline.ts`**, in absolute frames. Each scene starts exactly on its `from` frame, and the outgoing scene overlaps it by `TRANSITION_FRAMES`. Website and phone for the end card are in `CONTACT` in the same file. The logo is `public/logo.png` (circular cut-out of the brand badge); the brand font is Cinzel.
 
 ## Structure
 

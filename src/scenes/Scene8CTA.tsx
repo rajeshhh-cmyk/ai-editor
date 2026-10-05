@@ -68,8 +68,8 @@ export const Scene8CTA: React.FC<{ durationInFrames: number }> = ({ durationInFr
 
   const headSize = 118 * s;
   // During the end card the headline glides to the top of the stage.
-  const headY = interpolate(end, [0, 1], [0, -stage.height * 0.36]);
-  const headScale = interpolate(end, [0, 1], [1, 0.52]);
+  const headY = interpolate(end, [0, 1], [0, -stage.height * 0.43]);
+  const headScale = interpolate(end, [0, 1], [1, 0.46]);
 
   return (
     <>
@@ -127,6 +127,7 @@ export const Scene8CTA: React.FC<{ durationInFrames: number }> = ({ durationInFr
             position: "absolute",
             fontSize: headSize,
             textAlign: "center",
+            whiteSpace: "nowrap",
             opacity: startIn > 0.01 ? 1 : 0,
             transform: `translateY(${headY}px) scale(${interpolate(startIn, [0, 1], [0.7, 1]) * headScale})`,
           }}
@@ -140,15 +141,15 @@ export const Scene8CTA: React.FC<{ durationInFrames: number }> = ({ durationInFr
         <div
           style={{
             position: "absolute",
-            top: stage.height * 0.33,
+            top: stage.height * 0.27,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 54 * s,
+            gap: 40 * s,
           }}
         >
           <div style={{ transform: `scale(${interpolate(logoIn, [0, 1], [0.8, 1])})`, opacity: logoIn > 0.01 ? Math.min(1, logoIn) : 0 }}>
-            <LogoLockup size={124 * s} glow={1.4} />
+            <LogoLockup size={380 * s} glow={1.4} />
           </div>
           <div
             style={{
@@ -176,17 +177,18 @@ export const Scene8CTA: React.FC<{ durationInFrames: number }> = ({ durationInFr
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 8 * s,
-              fontFamily: FONTS.body,
-              fontWeight: 600,
-              fontSize: 32 * s,
-              color: COLORS.muted,
-              letterSpacing: "0.06em",
+              gap: 10 * s,
+              fontFamily: FONTS.brand,
+              fontWeight: 700,
+              fontSize: 40 * s,
+              color: COLORS.white,
+              letterSpacing: "0.04em",
               opacity: contactIn,
+              transform: `translateY(${(1 - contactIn) * 20}px)`,
             }}
           >
             <span>{CONTACT.website}</span>
-            <span>{CONTACT.phone}</span>
+            <span style={{ color: COLORS.gold }}>{CONTACT.phone}</span>
           </div>
         </div>
       </Stage>

@@ -1,54 +1,21 @@
 import React from "react";
-import { COLORS, FONTS } from "../theme";
-import { GoldText } from "./GoldText";
+import { Img, staticFile } from "remotion";
+import { goldRgba } from "../theme";
 
-/**
- * "White & Gold" (Playfair Display 700 italic) over a tracked-out
- * "AI SOLUTIONS" (Montserrat). `size` is the brand-name font size.
- */
+/** The White & Gold AI Solutions Inc. badge (public/logo.png). `size` is its diameter in px. */
 export const LogoLockup: React.FC<{
   size?: number;
   glow?: number;
-  align?: "center" | "flex-start";
   style?: React.CSSProperties;
-}> = ({ size = 130, glow = 1, align = "center", style }) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: align,
-        ...style,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: FONTS.brand,
-          fontStyle: "italic",
-          fontWeight: 700,
-          fontSize: size,
-          lineHeight: 1.05,
-          whiteSpace: "nowrap",
-          color: COLORS.white,
-        }}
-      >
-        White <span style={{ color: COLORS.muted }}>&amp;</span>{" "}
-        <GoldText glow={glow}>Gold</GoldText>
-      </div>
-      <div
-        style={{
-          fontFamily: FONTS.headline,
-          fontWeight: 700,
-          fontSize: size * 0.2,
-          letterSpacing: "0.55em",
-          marginTop: size * 0.12,
-          marginRight: "-0.55em",
-          color: COLORS.gold,
-          whiteSpace: "nowrap",
-        }}
-      >
-        AI SOLUTIONS
-      </div>
-    </div>
-  );
-};
+}> = ({ size = 400, glow = 1, style }) => (
+  <Img
+    src={staticFile("logo.png")}
+    style={{
+      width: size,
+      height: size,
+      display: "block",
+      filter: glow > 0 ? `drop-shadow(0 0 ${Math.round(40 * glow)}px ${goldRgba(Math.min(0.35 * glow, 0.7))})` : undefined,
+      ...style,
+    }}
+  />
+);

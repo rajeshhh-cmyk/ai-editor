@@ -1,6 +1,6 @@
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
-import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
+import { loadFont as loadCinzel } from "@remotion/google-fonts/Cinzel";
 import type React from "react";
 
 // ── Colors: black, white and gold only ────────────────────────────────
@@ -22,12 +22,12 @@ export const GOLD_GLOW_FILTER = `drop-shadow(0 0 40px ${goldRgba(0.35)})`;
 // ── Fonts ─────────────────────────────────────────────────────────────
 const montserrat = loadMontserrat("normal", { weights: ["600", "700", "800"], subsets: ["latin"] });
 const inter = loadInter("normal", { weights: ["600", "700"], subsets: ["latin"] });
-const playfair = loadPlayfair("italic", { weights: ["700"], subsets: ["latin"] });
+const cinzel = loadCinzel("normal", { weights: ["600", "700"], subsets: ["latin"] });
 
 export const FONTS = {
   headline: montserrat.fontFamily,
   body: inter.fontFamily,
-  brand: playfair.fontFamily,
+  brand: cinzel.fontFamily,
 } as const;
 
 export const HEADLINE: React.CSSProperties = {

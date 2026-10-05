@@ -5,7 +5,8 @@ import { useLayout } from "../layout";
 import { CUES, END_CARD_FRAMES } from "../timeline";
 import { LogoLockup } from "./LogoLockup";
 
-const BIG_SIZE = 130;
+/** Badge diameter at the centred reveal. */
+const BIG_SIZE = 560;
 
 /**
  * Global logo overlay (absolute timeline): reveals big and centred on
@@ -22,8 +23,8 @@ export const BrandLogo: React.FC = () => {
 
   const shrink = smooth(frame, fps, CUES.logoShrink, 22);
   const bigSize = BIG_SIZE * s;
-  const cornerSize = portrait ? 44 : 34;
-  const corner = portrait ? { x: 64, y: 128 } : { x: 64, y: 44 };
+  const cornerSize = portrait ? 104 : 84;
+  const corner = portrait ? { x: 52, y: 118 } : { x: 48, y: 36 };
   const center = { x: width / 2, y: stage.top + stage.height * 0.5 };
 
   const x = interpolate(shrink, [0, 1], [center.x, corner.x]);
@@ -49,7 +50,7 @@ export const BrandLogo: React.FC = () => {
           opacity,
         }}
       >
-        <LogoLockup size={bigSize} glow={interpolate(shrink, [0, 1], [1.6, 0.4])} align={shrink > 0.5 ? "flex-start" : "center"} />
+        <LogoLockup size={bigSize} glow={interpolate(shrink, [0, 1], [1.6, 0.5])} />
       </div>
     </AbsoluteFill>
   );

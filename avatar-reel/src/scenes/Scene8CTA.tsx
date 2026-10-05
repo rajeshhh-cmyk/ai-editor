@@ -3,7 +3,7 @@ import React from "react";
 import { AbsoluteFill, interpolate, random, useCurrentFrame, useVideoConfig } from "remotion";
 import { progress, smooth } from "../anim";
 import { ScanLine } from "../components/ScanLine";
-import { CUES, local } from "../scenes.config";
+import { CONTACT, CUES, local } from "../scenes.config";
 import { COLORS, FONTS, GLASS, GOLD_GRADIENT, ICON_STROKE, goldRgba } from "../theme";
 
 const L = (cue: number) => local("cta", cue);
@@ -30,6 +30,7 @@ export const Scene8CTA: React.FC = () => {
   const cursor = Math.floor(frame / 8) % 2 === 0 ? 1 : 0;
   const glow = 30 + Math.sin(frame / 5) * 16;
   const arrowIn = progress(frame, boxAt + 16, boxAt + 26);
+  const contactIn = smooth(frame, fps, boxAt + 10, 14);
   const bounce = Math.abs(Math.sin(frame / 6)) * 22;
 
   return (
@@ -105,6 +106,33 @@ export const Scene8CTA: React.FC = () => {
             <span style={{ width: 5, height: 60, marginLeft: 6, background: COLORS.black, opacity: cursor }} />
           </div>
         </div>
+      </div>
+
+      {/* Website + phone */}
+      <div
+        style={{
+          position: "absolute",
+          left: 70,
+          width: 940,
+          top: 1196,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 22,
+          fontFamily: FONTS.brand,
+          fontWeight: 700,
+          fontSize: 36,
+          letterSpacing: "0.03em",
+          color: COLORS.white,
+          textShadow: "0 3px 12px rgba(0,0,0,0.9)",
+          opacity: contactIn,
+          transform: `translateY(${(1 - contactIn) * 24}px)`,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span>{CONTACT.website}</span>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.gold }} />
+        <span style={{ color: COLORS.gold }}>{CONTACT.phone}</span>
       </div>
 
       {/* Bouncing arrow toward Instagram's comment area */}

@@ -1,6 +1,6 @@
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
-import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
+import { loadFont as loadCinzel } from "@remotion/google-fonts/Cinzel";
 import type { SpringConfig } from "remotion";
 
 // ── Colors ─────────────────────────────────────────────────────────────
@@ -37,15 +37,12 @@ loadInter("italic", {
   weights: ["700"],
   subsets: ["latin"],
 });
-const playfair = loadPlayfair("italic", {
-  weights: ["700"],
-  subsets: ["latin"],
-});
+const cinzel = loadCinzel("normal", { weights: ["600", "700"], subsets: ["latin"] });
 
 export const FONTS = {
   headline: montserrat.fontFamily,
   body: inter.fontFamily,
-  brand: playfair.fontFamily,
+  brand: cinzel.fontFamily,
 } as const;
 
 export const HEADLINE_STYLE = {

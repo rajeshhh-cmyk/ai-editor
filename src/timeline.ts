@@ -81,8 +81,8 @@ export const END_CARD_FRAMES = 45;
 /** Cue relative to a scene's first frame (what useCurrentFrame() returns inside it). */
 export const local = (scene: SceneKey, cue: number) => cue - SCENES[scene].from;
 
-/** Website / phone shown on the end card — replace with real details. */
+/** Website / phone shown on the end card. */
 export const CONTACT = {
-  website: "www.yourwebsite.com",
-  phone: "+00 00000 00000",
+  website: "www.wngsolutions.tech",
+  phone: "+1 437 972 0635",
 };

@@ -102,6 +102,12 @@ export const CUES = {
   grow2: word("GROW", 2),
 } as const;
 
+/** Website / phone shown on the final CTA. */
+export const CONTACT = {
+  website: "www.wngsolutions.tech",
+  phone: "+1 437 972 0635",
+} as const;
+
 // ── Scenes ────────────────────────────────────────────────────────────
 export const SCENES = {
   hook: { from: 0, to: CUES.heres - 4 },

@@ -41,10 +41,10 @@ export const Scene3Brand: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          left: W / 2 - 520,
-          top: 820 - 360,
-          width: 1040,
-          height: 720,
+          left: W / 2 - 540,
+          top: 820 - 540,
+          width: 1080,
+          height: 1080,
           background: `radial-gradient(ellipse at center, ${goldRgba(0.22 * pulse)} 0%, transparent 65%)`,
           opacity: halo,
         }}
@@ -54,7 +54,7 @@ export const Scene3Brand: React.FC = () => {
         style={{
           position: "absolute",
           left: W / 2,
-          top: 960,
+          top: 1130,
           height: 2,
           width: 600 * progress(frame, L(CUES.white) + 6, L(CUES.white) + 26),
           transform: "translateX(-50%)",
