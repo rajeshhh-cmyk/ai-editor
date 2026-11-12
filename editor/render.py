@@ -22,6 +22,12 @@ os.makedirs(WK, exist_ok=True)
 FPS = 30
 W, H = 1080, 1920
 ZOOM = {"wide": (1.0, 0.5, 0.40), "close": (1.30, 0.50, 0.36)}  # scale, cx, cy (face anchor)
+# split layout: (scale, crop-x, push-down) -> face sits low (~y 1200) under the B-roll band, as in the reference
+SPLIT = {"split": (1.30, 190, 300), "splitc": (1.50, 225, 175)}
+BAND_H = 640          # B-roll band height (top ~1/3 of frame)
+CARD_Y = 560          # headline card top in split layout (straddles the band edge)
+CAP_Y = 1420          # caption pill top
+ENHANCE = "unsharp=5:5:0.55:5:5:0.0,eq=contrast=1.04:brightness=0.012:saturation=1.06"
 
 
 def run(cmd):
@@ -37,14 +43,21 @@ def build_base(ed, preview=False):
     vlist, alist = [], []
     # one shot at a time (input seeking) keeps memory low on the 4K-bitrate source
     for i, sg in enumerate(segs):
-        z, cx, cy = ZOOM[sg.get("z", "wide")]
-        sw, sh = int(W * z) // 2 * 2, int(H * z) // 2 * 2
-        x = int(min(max(sw * cx - W / 2, 0), sw - W))
-        y = int(min(max(sh * cy - H * 0.40, 0), sh - H)) if z > 1 else 0
+        zk = sg.get("z", "wide")
+        if zk in SPLIT:
+            z, x, push = SPLIT[zk]
+            sw, sh = int(W * z) // 2 * 2, int(H * z) // 2 * 2
+            frame_vf = f"scale={sw}:{sh}:flags=lanczos,crop={W}:{H - push}:{x}:0,pad={W}:{H}:0:{push}"
+        else:
+            z, cx, cy = ZOOM[zk]
+            sw, sh = int(W * z) // 2 * 2, int(H * z) // 2 * 2
+            x = int(min(max(sw * cx - W / 2, 0), sw - W))
+            y = int(min(max(sh * cy - H * 0.40, 0), sh - H)) if z > 1 else 0
+            frame_vf = f"scale={sw}:{sh}:flags=lanczos,crop={W}:{H}:{x}:{y}"
         d = sg['e'] - sg['s']
         nfr = round(d * FPS)
         run(["ffmpeg", "-v", "error", "-y", "-ss", f"{sg['s']:.3f}", "-i", RAW, "-t", f"{d:.3f}",
-             "-vf", f"fps={FPS},scale={sw}:{sh}:flags=lanczos,crop={W}:{H}:{x}:{y},setsar=1",
+             "-vf", f"fps={FPS},{frame_vf},{ENHANCE},setsar=1",
              "-frames:v", str(nfr), "-an", "-c:v", "libx264", "-preset", "veryfast" if preview else "medium",
              "-crf", "14", "-pix_fmt", "yuv420p", f"{sd}/{i:03d}.mp4"])
         # audio cut to exactly the frame count so A/V never drifts
@@ -125,25 +138,142 @@ def blend(frame, a, x, y):
 COLORS = {"black": gfx.BLACK, "red": gfx.RED}
 
 
+def in_split(ed, t):
+    return any(m["t0"] <= t < m["t1"] for m in ed.get("split", []))
+
+
+def full_windows(ed):
+    """Complement of split windows within [0, end)."""
+    out, cur = [], 0.0
+    for m in sorted(ed.get("split", []), key=lambda m: m["t0"]):
+        if m["t0"] > cur:
+            out.append((cur, m["t0"]))
+        cur = max(cur, m["t1"])
+    if cur < ed["end"]["t0"]:
+        out.append((cur, ed["end"]["t0"]))
+    return out
+
+
 def build_layers(ed, total):
     L = []
-    # persistent brand elements
-    lg = gfx.logo(270)
-    L.append(Layer(lg, W - lg.width - 14, 14, 0, ed["end"]["t0"], anim=None))
+    end = ed["end"]["t0"]
     ft = gfx.footer()
-    L.append(Layer(ft, (W - ft.width) // 2, 1808, 0, ed["end"]["t0"], anim=None))
-    # instagram watermark: right side, sits below the card area
+    L.append(Layer(ft, (W - ft.width) // 2, 1808, 0, end, anim=None))
+    # instagram watermark: left above the caption in split layout, right side in full-frame (as reference)
     hd = gfx.handle_tag()
-    L.append(Layer(hd, W - hd.width - 34, 560, 0, ed["end"]["t0"], anim=None))
+    for m in ed.get("split", []):
+        L.append(Layer(hd, 40, 1255, m["t0"], m["t1"], anim="fade"))
+    for a, b in full_windows(ed):
+        L.append(Layer(hd, W - hd.width - 34, 560, a, b, anim="fade"))
     for c in ed["cards"]:
         lines = [[(t, COLORS[col]) for t, col in ln] for ln in c["lines"]]
         img, pad = gfx.card(lines, size=c.get("size", 60))
-        y = c.get("y", 235)
+        y = c.get("y", CARD_Y)
         L.append(Layer(img, (W - img.width) // 2, y - pad, c["t0"], c["t1"], anim="pop"))
     for cp in ed["captions"]:
         p = gfx.pill(cp["text"], size=46)
-        L.append(Layer(p, (W - p.width) // 2, 1395, cp["t0"], cp["t1"], anim="pop"))
+        L.append(Layer(p, (W - p.width) // 2, CAP_Y, cp["t0"], cp["t1"], anim="pop"))
     return L
+
+
+# ---------- B-roll band ----------
+BR_W, BR_H = int(W * 1.12) // 2 * 2, int(BAND_H * 1.12) // 2 * 2   # oversize for Ken Burns
+
+
+def prep_broll(ed, preview=False):
+    """Render each scheduled B-roll piece to a band-sized clip (enhanced, 30 fps)."""
+    bd = f"{WK}/broll"; os.makedirs(bd, exist_ok=True)
+    k = 0
+    for w in ed.get("broll", []):
+        for c in w["clips"]:
+            src = os.path.join(ROOT, "broll/src", c["file"])
+            dur = c["t1"] - c["t0"] + 0.6
+            fy = c.get("fy", 0.5)
+            # fill the band: scale to cover, crop around the chosen vertical focus
+            vf = (f"scale={BR_W}:{BR_H}:force_original_aspect_ratio=increase:flags=lanczos,"
+                  f"crop={BR_W}:{BR_H}:(iw-{BR_W})/2:(ih-{BR_H})*{fy},{ENHANCE},fps={FPS},setsar=1")
+            out = f"{bd}/{k:02d}.mp4"
+            if src.lower().endswith((".jpg", ".png")):
+                cmd = ["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", src, "-t", f"{dur:.3f}"]
+            else:
+                cmd = ["ffmpeg", "-v", "error", "-y", "-ss", f"{c['ss']:.2f}", "-stream_loop", "3", "-i", src,
+                       "-t", f"{dur:.3f}"]
+            run(cmd + ["-vf", vf, "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "15",
+                       "-pix_fmt", "yuv420p", out])
+            c["path"] = out
+            k += 1
+
+
+class ClipReader:
+    def __init__(self, path):
+        self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                                  stdout=subprocess.PIPE)
+        self.last = None
+
+    def next(self):
+        buf = self.p.stdout.read(BR_W * BR_H * 3)
+        if len(buf) == BR_W * BR_H * 3:
+            self.last = np.frombuffer(buf, np.uint8).reshape(BR_H, BR_W, 3)
+        return self.last
+
+    def close(self):
+        self.p.kill()
+
+
+class Band:
+    """Top B-roll band: slides down on entry, Ken Burns push per clip, crossfades between clips, slides up on exit."""
+    def __init__(self, ed):
+        self.wins = ed.get("broll", [])
+        self.readers = {}
+
+    def _clip_frame(self, c, t, i):
+        key = c["path"]
+        if key not in self.readers:
+            self.readers[key] = ClipReader(key)
+        fr = self.readers[key].next()
+        p = min(1, max(0, (t - c["t0"]) / max(0.1, c["t1"] - c["t0"])))
+        zin = i % 2 == 0                              # alternate push-in / pull-out
+        s = 1.0 + 0.11 * (p if zin else 1 - p)        # crop scale inside the 12% oversize
+        cw, ch = int(BR_W / (1.12 / s) / s * 1.0), 0
+        cw = int(W * 1.12 / s); ch = int(BAND_H * 1.12 / s)
+        cw = min(cw, BR_W); ch = min(ch, BR_H)
+        x0 = (BR_W - cw) // 2; y0 = (BR_H - ch) // 2
+        im = Image.fromarray(fr[y0:y0 + ch, x0:x0 + cw]).resize((W, BAND_H), Image.BILINEAR)
+        return np.asarray(im).astype(np.float32)
+
+    def draw(self, frame, t):
+        for w in self.wins:
+            if not (w["t0"] <= t < w["t1"]):
+                continue
+            clips = w["clips"]
+            band = None
+            for i, c in enumerate(clips):
+                if c["t0"] <= t < c["t1"] + (0.3 if i < len(clips) - 1 else 0):
+                    f = self._clip_frame(c, t, i)
+                    if band is None:
+                        band = f
+                    else:  # crossfade into the next clip
+                        a = min(1, (t - c["t0"]) / 0.3)
+                        band = band * (1 - a) + f * a
+            if band is None:
+                return
+            if t >= clips[-1]["t0"] and len(clips) > 1:
+                pass
+            # entry / exit motion of the whole band
+            k_in, k_out = t - w["t0"], w["t1"] - t
+            off = 0
+            if k_in < 0.35 and w["t0"] > 0:
+                off = -int(BAND_H * (1 - ease_out(k_in / 0.35)))
+            elif k_out < 0.3:
+                off = -int(BAND_H * (1 - ease_out(k_out / 0.3)))
+            y0 = max(0, off + 0); vis = BAND_H + off
+            if vis > 0:
+                frame[0:vis] = band[BAND_H - vis:BAND_H]
+                # soft shadow under the band
+                sh = np.linspace(0.45, 0, 18)[:, None, None]
+                e = min(H, vis + 18)
+                frame[vis:e] *= (1 - sh[:e - vis])
+            return
 
 
 def flash_frame(frame, k):
@@ -164,6 +294,9 @@ def composite(ed, out_path, preview=False):
                            f"{WK}/base.mp4"], capture_output=True, text=True).stdout
     total = float(info)
     layers = build_layers(ed, total)
+    band = Band(ed)
+    lg = gfx.logo(270)
+    logo_l = Layer(lg, W - lg.width - 14, 14, 0, ed["end"]["t0"], anim=None)
     end_t0, end_dur = ed["end"]["t0"], ed["end"]["dur"]
     eh_grad, eh_white = gfx.end_handle(True), gfx.end_handle(False)
     eg = np.asarray(eh_grad).astype(np.float32)
@@ -189,7 +322,8 @@ def composite(ed, out_path, preview=False):
         lum = fr.mean(-1, keepdims=True)
         fr = lum + (fr - lum) * 1.10
         if t < end_t0:
-            for ly in layers:
+            band.draw(fr, t)
+            for ly in layers + [logo_l]:
                 r = ly.frame(t)
                 if r is not None:
                     blend(fr, *r)
@@ -273,6 +407,7 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(out), exist_ok=True)
     if "--skip-base" not in sys.argv:
         build_base(ed, preview)
+    prep_broll(ed, preview)
     total = composite(ed, out, preview)
     sfx(ed, total)
     master(out, total)

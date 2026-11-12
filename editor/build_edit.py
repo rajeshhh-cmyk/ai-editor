@@ -15,6 +15,19 @@ MAX_GAP = 0.30   # pauses longer than this are cut down
 PAD = 0.10       # breath kept either side of a cut
 
 B, R = "black", "red"
+
+# Top-band B-roll: Matoshree's own maternity-ward footage (Drive: "Matoshree Hospitals Data").
+# (file in broll/src, start offset s, vertical focus 0..1)
+BROLL = {
+    "hook": [("VID-20240428-WA0042.mp4", 0.8, 0.42)],                       # mother in bed with newborn
+    "m1": [("VID-20240804-WA0019.mp4", 3.0, 0.22), ("VID-20240416-WA0018.mp4", 4.0, 0.18)],
+    "m2": [("VID-20250205-WA0038.mp4", 5.0, 0.50), ("VID-20241117-WA0022.mp4", 2.0, 0.45)],
+    "m3": [("VID-20240929-WA0014.mp4", 2.0, 0.20), ("VID-20240301-WA0017.mp4", 5.0, 0.55)],
+    "m4": [("VID-20240428-WA0045.mp4", 3.0, 0.50), ("VID-20240622-WA0028.mp4", 4.0, 0.30)],  # mothers holding newborns
+    "cta": [("VID-20240604-WA0135.mp4", 2.0, 0.45), ("IMG_20240404_175017.jpg", 0.0, 0.40)],      # reception, logo wall
+}
+SPLIT_FRAC = {"hook": 1.0, "cta": 1.0}  # others: split ~60% of the section, then full-frame
+
 SECTIONS = [
     {"name": "hook",
      "card": {"lines": [[["Cesarean", B], ["section", B], ["के", B], ["बाद", B]],
@@ -106,35 +119,46 @@ def shots(a, b, cap_times, max_len=3.2):
 
 
 def main():
-    segs, caps, cards, flashes = [], [], [], []
+    segs, caps, cards, flashes, brolls, modes = [], [], [], [], [], []
     t_out = 0.0
-    zoom_toggle = 0
     mapping = []  # (src_s, src_e, out_s)
     for sec in SECTIONS:
         sec_t0 = t_out
         cap_src = [t for _, t in sec["caps"]]
-        first = True
+        pieces = []
         for rs, re_ in sec["ranges"]:
             for a0, b0 in split_range(rs, re_):
-                if b0 - a0 < 0.12:
-                    continue
-                for a, b in shots(a0, b0, cap_src):
-                    # punch-in on each section start, then alternate wide/close every cut
-                    if first:
-                        z = "close"; zoom_toggle = 1; first = False
-                    else:
-                        z = "wide" if zoom_toggle % 2 else "close"
-                        zoom_toggle += 1
-                    segs.append({"s": round(a, 3), "e": round(b, 3), "z": z})
-                    mapping.append((a, b, t_out))
-                    t_out += b - a
+                if b0 - a0 >= 0.12:
+                    pieces += shots(a0, b0, cap_src)
+        sec_len = sum(b - a for a, b in pieces)
+        frac = SPLIT_FRAC.get(sec["name"], 0.6)
+        # split-screen (B-roll top + card) for the first part, ending on a shot boundary
+        target = sec_len * frac
+        acc, n_split = 0.0, 0
+        for a, b in pieces:
+            if acc >= target - 0.3 or (frac < 1 and sec_len - acc < 2.5):
+                break
+            acc += b - a; n_split += 1
+        if frac < 1 and n_split == len(pieces):
+            n_split -= 1
+        toggle = 0
+        for k, (a, b) in enumerate(pieces):
+            if k < n_split:
+                z = "split" if k % 2 == 0 else "splitc"
+            else:
+                z = "wide" if toggle % 2 else "close"; toggle += 1
+            segs.append({"s": round(a, 3), "e": round(b, 3), "z": z})
+            mapping.append((a, b, t_out))
+            t_out += b - a
+            if k == n_split - 1:
+                split_t1 = t_out
         sec_t1 = t_out
+        split_t1 = split_t1 if n_split else sec_t0
         # captions: map source time -> output time
         def m(ts):
             for a, b, o in mapping:
                 if a - 0.001 <= ts < b:
                     return o + ts - a
-            # in a cut gap: snap to next kept piece
             nxt = [o for a, b, o in mapping if a >= ts]
             return min(nxt) if nxt else t_out
         times = [max(sec_t0, m(t)) for _, t in sec["caps"]]
@@ -143,20 +167,28 @@ def main():
             c1 = times[i + 1] if i + 1 < len(times) else sec_t1
             if c1 - c0 > 0.05:
                 caps.append({"t0": round(c0, 3), "t1": round(c1, 3), "text": txt})
-        if sec["card"]:
-            cards.append(dict(sec["card"], t0=round(sec_t0 + (0.0 if sec["name"] == "hook" else 0.05), 3),
-                              t1=round(sec_t1, 3)))
+        if n_split:
+            modes.append({"t0": round(sec_t0, 3), "t1": round(split_t1, 3)})
+            clips = BROLL[sec["name"]]
+            dur = (split_t1 - sec_t0) / len(clips)
+            brolls.append({"t0": round(sec_t0, 3), "t1": round(split_t1, 3),
+                           "clips": [{"file": f, "ss": ss, "fy": fy, "t0": round(sec_t0 + i * dur, 3),
+                                      "t1": round(sec_t0 + (i + 1) * dur, 3)} for i, (f, ss, fy) in enumerate(clips)]})
+            if sec["card"]:
+                cards.append(dict(sec["card"], t0=round(sec_t0 + (0.0 if sec["name"] == "hook" else 0.12), 3),
+                                  t1=round(split_t1, 3)))
         if sec["name"] != "hook":
             flashes.append(round(sec_t0, 3))
     end_t0 = t_out
     segs.append({"s": END_TAIL[0], "e": END_TAIL[1], "z": "wide"})
     t_out += END_TAIL[1] - END_TAIL[0]
     ed = {"segments": segs, "captions": caps, "cards": cards, "flashes": flashes[:-1],  # no flash into CTA
+          "split": modes, "broll": brolls,
           "end": {"t0": round(end_t0, 3), "dur": round(END_TAIL[1] - END_TAIL[0], 3)}}
     json.dump(ed, open(os.path.join(WK, "edit.json"), "w"), ensure_ascii=False, indent=1)
     print(f"segments={len(segs)} total={t_out:.2f}s speech={end_t0:.2f}s cards={len(cards)} caps={len(caps)}")
-    for c in cards:
-        print("card", c["t0"], c["t1"])
+    for b in brolls:
+        print("split", b["t0"], b["t1"], [c["file"][:14] for c in b["clips"]])
     print("flashes", ed["flashes"])
 
 
