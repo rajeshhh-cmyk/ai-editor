@@ -1,1 +1,5 @@
 raw/
+ref/
+work/
+out/
+__pycache__/
