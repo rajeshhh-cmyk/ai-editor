@@ -32,32 +32,36 @@ def run(cmd):
 def build_base(ed, preview=False):
     """Cut + per-segment framing -> base.mp4 (video only) and voice.wav."""
     segs = ed["segments"]
-    fc = []
-    vi, ai = [], []
+    sd = f"{WK}/shots"
+    os.makedirs(sd, exist_ok=True)
+    vlist, alist = [], []
+    # one shot at a time (input seeking) keeps memory low on the 4K-bitrate source
     for i, sg in enumerate(segs):
         z, cx, cy = ZOOM[sg.get("z", "wide")]
         sw, sh = int(W * z) // 2 * 2, int(H * z) // 2 * 2
         x = int(min(max(sw * cx - W / 2, 0), sw - W))
         y = int(min(max(sh * cy - H * 0.40, 0), sh - H)) if z > 1 else 0
-        fc.append(f"[0:v]trim={sg['s']:.3f}:{sg['e']:.3f},setpts=PTS-STARTPTS,fps={FPS},"
-                  f"scale={sw}:{sh}:flags=lanczos,crop={W}:{H}:{x}:{y},setsar=1[v{i}]")
         d = sg['e'] - sg['s']
-        fc.append(f"[0:a]atrim={sg['s']:.3f}:{sg['e']:.3f},asetpts=PTS-STARTPTS,"
-                  f"afade=t=in:d=0.012,afade=t=out:st={max(d-0.015,0):.3f}:d=0.015[a{i}]")
-        vi.append(f"[v{i}]"); ai.append(f"[a{i}]")
-    fc.append("".join(vi) + f"concat=n={len(segs)}:v=1:a=0[vout]")
-    fc.append("".join(ai) + f"concat=n={len(segs)}:v=0:a=1[acat]")
+        nfr = round(d * FPS)
+        run(["ffmpeg", "-v", "error", "-y", "-ss", f"{sg['s']:.3f}", "-i", RAW, "-t", f"{d:.3f}",
+             "-vf", f"fps={FPS},scale={sw}:{sh}:flags=lanczos,crop={W}:{H}:{x}:{y},setsar=1",
+             "-frames:v", str(nfr), "-an", "-c:v", "libx264", "-preset", "veryfast" if preview else "medium",
+             "-crf", "14", "-pix_fmt", "yuv420p", f"{sd}/{i:03d}.mp4"])
+        # audio cut to exactly the frame count so A/V never drifts
+        da = nfr / FPS
+        run(["ffmpeg", "-v", "error", "-y", "-ss", f"{sg['s']:.3f}", "-i", RAW, "-t", f"{da:.4f}", "-vn",
+             "-af", f"aformat=sample_rates=48000:channel_layouts=mono,afade=t=in:d=0.012,"
+                    f"afade=t=out:st={max(da-0.015,0):.4f}:d=0.015,apad=whole_dur={da:.4f}",
+             "-c:a", "pcm_s16le", f"{sd}/{i:03d}.wav"])
+        vlist.append(f"file '{sd}/{i:03d}.mp4'"); alist.append(f"file '{sd}/{i:03d}.wav'")
+    open(f"{sd}/v.txt", "w").write("\n".join(vlist)); open(f"{sd}/a.txt", "w").write("\n".join(alist))
+    run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", f"{sd}/v.txt", "-c", "copy", f"{WK}/base.mp4"])
     # voice treatment: rumble cut, denoise, gentle de-mud, presence, compression
-    fc.append("[acat]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=mono,"
-              "highpass=f=80,afftdn=nr=14:nf=-42:tn=1,"
-              "equalizer=f=250:t=q:w=1.2:g=-2,equalizer=f=3500:t=q:w=1.5:g=2.5,"
-              "acompressor=threshold=-20dB:ratio=3:attack=8:release=120:makeup=3[aout]")
-    fcs = ";\n".join(fc)
-    open(f"{WK}/base_filter.txt", "w").write(fcs)
-    run(["ffmpeg", "-v", "error", "-y", "-i", RAW, "-filter_complex_script", f"{WK}/base_filter.txt",
-         "-map", "[vout]", "-c:v", "libx264", "-preset", "veryfast" if preview else "medium",
-         "-crf", "16", "-pix_fmt", "yuv420p", f"{WK}/base.mp4",
-         "-map", "[aout]", "-c:a", "pcm_s16le", f"{WK}/voice.wav"])
+    run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", f"{sd}/a.txt", "-af",
+         "highpass=f=80,afftdn=nr=14:nf=-42:tn=1,"
+         "equalizer=f=250:t=q:w=1.2:g=-2,equalizer=f=3500:t=q:w=1.5:g=2.5,"
+         "acompressor=threshold=-20dB:ratio=3:attack=8:release=120:makeup=3",
+         "-c:a", "pcm_s16le", f"{WK}/voice.wav"])
 
 
 # ---------- overlay compositing ----------
@@ -255,7 +259,7 @@ def master(out_path, total):
     # voice -> loudness -14 LUFS / -1 dBTP like the reference, then add SFX underneath
     run(["ffmpeg", "-v", "error", "-y", "-i", f"{WK}/comp.mp4", "-i", f"{WK}/voice.wav", "-i", f"{WK}/sfx.wav",
          "-filter_complex",
-         "[1:a]loudnorm=I=-14.5:TP=-1.5:LRA=7[v];[2:a]volume=1.0[s];"
+         "[1:a]loudnorm=I=-14.5:TP=-1.5:LRA=7,aresample=48000[v];[2:a]volume=1.0[s];"
          "[v][s]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89,"
          "aformat=sample_rates=48000:channel_layouts=stereo[a]",
          "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
