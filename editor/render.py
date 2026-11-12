@@ -134,7 +134,7 @@ def build_layers(ed, total):
     for c in ed["cards"]:
         lines = [[(t, COLORS[col]) for t, col in ln] for ln in c["lines"]]
         img, pad = gfx.card(lines, size=c.get("size", 60))
-        y = c.get("y", 150)
+        y = c.get("y", 235)
         L.append(Layer(img, (W - img.width) // 2, y - pad, c["t0"], c["t1"], anim="pop"))
     for cp in ed["captions"]:
         p = gfx.pill(cp["text"], size=46)
@@ -149,7 +149,7 @@ def flash_frame(frame, k):
         return
     yy = np.linspace(-1, 1, H)[:, None]
     xx = np.linspace(-1, 1, W)[None, :]
-    g = np.clip(1.3 - np.sqrt((xx + 0.2) ** 2 + (yy + 0.1) ** 2), 0, 1)
+    g = np.clip(1.6 - 0.8 * np.sqrt((xx + 0.2) ** 2 + (yy + 0.1) ** 2), 0, 1)
     warm = np.stack([255 * np.ones_like(g), 200 + 55 * g, 120 + 135 * g], -1)
     a = (amt * (0.55 + 0.45 * g))[..., None]
     frame[:] = frame * (1 - a) + warm * a
