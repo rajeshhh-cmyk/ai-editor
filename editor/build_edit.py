@@ -18,13 +18,13 @@ B, R = "black", "red"
 
 # Top-band B-roll: Matoshree's own maternity-ward footage (Drive: "Matoshree Hospitals Data").
 # (file in broll/src, start offset s, vertical focus 0..1)
-BROLL = {
-    "hook": [("VID-20240428-WA0042.mp4", 0.8, 0.42)],                       # mother in bed with newborn
-    "m1": [("VID-20240804-WA0019.mp4", 3.0, 0.22), ("VID-20240416-WA0018.mp4", 4.0, 0.18)],
-    "m2": [("VID-20250205-WA0038.mp4", 5.0, 0.50), ("VID-20241117-WA0022.mp4", 2.0, 0.45)],
-    "m3": [("VID-20240929-WA0014.mp4", 2.0, 0.20), ("VID-20240301-WA0017.mp4", 5.0, 0.55)],
-    "m4": [("VID-20240428-WA0045.mp4", 3.0, 0.50), ("VID-20240622-WA0028.mp4", 4.0, 0.30)],  # mothers holding newborns
-    "cta": [("VID-20240604-WA0135.mp4", 2.0, 0.45), ("IMG_20240404_175017.jpg", 0.0, 0.40)],      # reception, logo wall
+BROLL = {  # AI stills (editor/gen_ai_broll.py, SDXL-Turbo) animated in the band; CTA = real Matoshree reception
+    "hook": [("ai/hook_a_1.png", 0, 0.5)],
+    "m1": [("ai/m1_b_1.png", 0, 0.5), ("ai/m1_a_2.png", 0, 0.5)],
+    "m2": [("ai/m2_a_1.png", 0, 0.5), ("ai/m2_b_2.png", 0, 0.5)],
+    "m3": [("ai/m3_a_1.png", 0, 0.5), ("ai/m3_b_2.png", 0, 0.5)],
+    "m4": [("ai/m4_a_2.png", 0, 0.5), ("ai/m4_b_2.png", 0, 0.5)],
+    "cta": [("src/VID-20240604-WA0135.mp4", 2.0, 0.45), ("src/IMG_20240404_175017.jpg", 0.0, 0.40)],
 }
 SPLIT_FRAC = {"hook": 1.0, "cta": 1.0}  # others: split ~60% of the section, then full-frame
 

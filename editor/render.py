@@ -186,7 +186,7 @@ def prep_broll(ed, preview=False):
     k = 0
     for w in ed.get("broll", []):
         for c in w["clips"]:
-            src = os.path.join(ROOT, "broll/src", c["file"])
+            src = os.path.join(ROOT, "broll", c["file"])
             dur = c["t1"] - c["t0"] + 0.6
             fy = c.get("fy", 0.5)
             # fill the band: scale to cover, crop around the chosen vertical focus
@@ -206,7 +206,7 @@ def prep_broll(ed, preview=False):
 
 class ClipReader:
     def __init__(self, path):
-        self.p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+        self.p = subprocess.Popen(["ffmpeg", "-v", "quiet", "-i", path, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
                                   stdout=subprocess.PIPE)
         self.last = None
 
@@ -259,20 +259,20 @@ class Band:
                 return
             if t >= clips[-1]["t0"] and len(clips) > 1:
                 pass
-            # entry / exit motion of the whole band
-            k_in, k_out = t - w["t0"], w["t1"] - t
-            off = 0
-            if k_in < 0.35 and w["t0"] > 0:
-                off = -int(BAND_H * (1 - ease_out(k_in / 0.35)))
-            elif k_out < 0.3:
-                off = -int(BAND_H * (1 - ease_out(k_out / 0.3)))
-            y0 = max(0, off + 0); vis = BAND_H + off
-            if vis > 0:
-                frame[0:vis] = band[BAND_H - vis:BAND_H]
-                # soft shadow under the band
-                sh = np.linspace(0.45, 0, 18)[:, None, None]
-                e = min(H, vis + 18)
-                frame[vis:e] *= (1 - sh[:e - vis])
+            # entry: content punches in (zoom 1.08 -> 1) out of a white flash; exit is a hard cut on the shot change
+            # (sliding the band would reveal the black pad above the pushed-down speaker)
+            k_in = t - w["t0"]
+            if k_in < 0.3 and w["t0"] > 0:
+                p = ease_out(k_in / 0.3)
+                z = 1.08 - 0.08 * p
+                ch, cw = int(BAND_H / z), int(W / z)
+                y0, x0 = (BAND_H - ch) // 2, (W - cw) // 2
+                band = np.asarray(Image.fromarray(band[y0:y0 + ch, x0:x0 + cw].astype(np.uint8)).resize(
+                    (W, BAND_H), Image.BILINEAR)).astype(np.float32)
+                band = band * p + 255 * (1 - p)
+            frame[0:BAND_H] = band
+            sh = np.linspace(0.45, 0, 18)[:, None, None]
+            frame[BAND_H:BAND_H + 18] *= (1 - sh)
             return
 
 
@@ -293,6 +293,19 @@ def composite(ed, out_path, preview=False):
     info = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                            f"{WK}/base.mp4"], capture_output=True, text=True).stdout
     total = float(info)
+    # snap split/B-roll windows to the real cut frames (each shot is rounded to whole frames)
+    bounds, acc = [0.0], 0
+    for sg in ed["segments"]:
+        acc += round((sg["e"] - sg["s"]) * FPS); bounds.append(acc / FPS)
+    snap = lambda x: min(bounds, key=lambda b: abs(b - x))
+    for m in ed.get("split", []):
+        m["t0"], m["t1"] = snap(m["t0"]), snap(m["t1"])
+    for w in ed.get("broll", []):
+        w["t0"], w["t1"] = snap(w["t0"]), snap(w["t1"])
+        w["clips"][0]["t0"] = w["t0"]; w["clips"][-1]["t1"] = w["t1"]
+    for c in ed["cards"]:
+        c["t1"] = snap(c["t1"])
+    ed["end"]["t0"] = snap(ed["end"]["t0"])
     layers = build_layers(ed, total)
     band = Band(ed)
     lg = gfx.logo(270)
