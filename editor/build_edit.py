@@ -18,13 +18,13 @@ B, R = "black", "red"
 
 # Top-band B-roll: Matoshree's own maternity-ward footage (Drive: "Matoshree Hospitals Data").
 # (file in broll/src, start offset s, vertical focus 0..1)
-BROLL = {  # AI stills (editor/gen_ai_broll.py, SDXL-Turbo) animated in the band; CTA = real Matoshree reception
-    "hook": [("ai/hook_a_1.png", 0, 0.5)],
-    "m1": [("ai/m1_b_1.png", 0, 0.5), ("ai/m1_a_2.png", 0, 0.5)],
-    "m2": [("ai/m2_a_1.png", 0, 0.5), ("ai/m2_b_2.png", 0, 0.5)],
-    "m3": [("ai/m3_a_1.png", 0, 0.5), ("ai/m3_b_2.png", 0, 0.5)],
-    "m4": [("ai/m4_a_2.png", 0, 0.5), ("ai/m4_b_2.png", 0, 0.5)],
-    "cta": [("src/VID-20240604-WA0135.mp4", 2.0, 0.45), ("src/IMG_20240404_175017.jpg", 0.0, 0.40)],
+BROLL = {  # (file under broll/, start s, vertical focus, corner trim to drop Gemini watermark)
+    "hook": [("user/operation_room.png", 0, 0.5, 0.07), ("user/doctor_chart.png", 0, 0.5, 0.07)],   # user-supplied AI
+    "m1": [("user/walk.mp4", 3.6, 0.45, 0.08)],                                                      # user-supplied AI video
+    "m2": [("ai/m2_a_1.png", 0, 0.5, 0), ("ai/m2_b_2.png", 0, 0.5, 0)],
+    "m3": [("user/diet.png", 0, 0.5, 0.07)],                                                          # user-supplied AI
+    "m4": [("ai/m4_a_2.png", 0, 0.5, 0), ("ai/m4_b_2.png", 0, 0.5, 0)],
+    "cta": [("src/VID-20240604-WA0135.mp4", 2.0, 0.45, 0), ("src/IMG_20240404_175017.jpg", 0.0, 0.40, 0)],
 }
 SPLIT_FRAC = {"hook": 1.0, "cta": 1.0}  # others: split ~60% of the section, then full-frame
 
@@ -172,8 +172,8 @@ def main():
             clips = BROLL[sec["name"]]
             dur = (split_t1 - sec_t0) / len(clips)
             brolls.append({"t0": round(sec_t0, 3), "t1": round(split_t1, 3),
-                           "clips": [{"file": f, "ss": ss, "fy": fy, "t0": round(sec_t0 + i * dur, 3),
-                                      "t1": round(sec_t0 + (i + 1) * dur, 3)} for i, (f, ss, fy) in enumerate(clips)]})
+                           "clips": [{"file": f, "ss": ss, "fy": fy, "trim": tr, "t0": round(sec_t0 + i * dur, 3),
+                                      "t1": round(sec_t0 + (i + 1) * dur, 3)} for i, (f, ss, fy, tr) in enumerate(clips)]})
             if sec["card"]:
                 cards.append(dict(sec["card"], t0=round(sec_t0 + (0.0 if sec["name"] == "hook" else 0.12), 3),
                                   t1=round(split_t1, 3)))

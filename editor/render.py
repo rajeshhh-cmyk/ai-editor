@@ -190,7 +190,9 @@ def prep_broll(ed, preview=False):
             dur = c["t1"] - c["t0"] + 0.6
             fy = c.get("fy", 0.5)
             # fill the band: scale to cover, crop around the chosen vertical focus
-            vf = (f"scale={BR_W}:{BR_H}:force_original_aspect_ratio=increase:flags=lanczos,"
+            tr = c.get("trim", 0)
+            pre = f"crop=iw*{1 - tr:.3f}:ih*{1 - tr:.3f}:0:0," if tr else ""
+            vf = (f"{pre}scale={BR_W}:{BR_H}:force_original_aspect_ratio=increase:flags=lanczos,"
                   f"crop={BR_W}:{BR_H}:(iw-{BR_W})/2:(ih-{BR_H})*{fy},{ENHANCE},fps={FPS},setsar=1")
             out = f"{bd}/{k:02d}.mp4"
             if src.lower().endswith((".jpg", ".png")):
